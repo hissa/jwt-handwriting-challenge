@@ -1,8 +1,63 @@
 use std::collections::HashMap;
 
+use rsa::{
+    pkcs1::{DecodeRsaPrivateKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
+    pkcs1v15::SigningKey,
+    sha2::Sha256,
+    signature::{RandomizedSigner, SignatureEncoding},
+    RsaPrivateKey, RsaPublicKey,
+};
+
 fn main() {
-    println!("Hello, world!");
-    println!("{}", base64("ABCDEFG".as_bytes()));
+    let private_key = prepare_keys();
+    println!("{}", create_jwt(private_key));
+}
+
+fn create_jwt(private_key: RsaPrivateKey) -> String {
+    let header = r#"{"alg":"RS256"}"#;
+    let payload = r#"{"iat":1713627229}"#;
+
+    let header = base64_url(header.as_bytes());
+    let payload = base64_url(payload.as_bytes());
+
+    let signing_key = SigningKey::<Sha256>::new(private_key);
+    let mut rng = rand::thread_rng();
+    let body = [header, payload].join(".");
+    let signature = signing_key.sign_with_rng(&mut rng, body.as_bytes());
+    let signature = base64_url(&signature.to_bytes());
+
+    [body, signature.to_string()].join(".")
+}
+
+fn prepare_keys() -> RsaPrivateKey {
+    match RsaPrivateKey::read_pkcs1_pem_file("id_rsa") {
+        Ok(pk) => pk,
+        Err(_) => generate_keys().0,
+    }
+}
+
+fn generate_keys() -> (RsaPrivateKey, RsaPublicKey) {
+    let mut rng = rand::thread_rng();
+    let bits = 2048;
+    let priv_key = RsaPrivateKey::new(&mut rng, bits).expect("Failed to generate a key");
+    let pub_key = RsaPublicKey::from(&priv_key);
+
+    priv_key
+        .write_pkcs1_pem_file("id_rsa", rsa::pkcs1::LineEnding::LF)
+        .expect("Failed to write private key");
+
+    pub_key
+        .write_pkcs1_pem_file("id_rsa.pub", rsa::pkcs1::LineEnding::LF)
+        .expect("Failed to write public key");
+
+    (priv_key, pub_key)
+}
+
+fn base64_url(bytes: &[u8]) -> String {
+    base64(bytes)
+        .replace('+', "-")
+        .replace('/', "_")
+        .replace('=', "")
 }
 
 fn base64(bytes: &[u8]) -> String {
