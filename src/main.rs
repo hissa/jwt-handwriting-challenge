@@ -84,6 +84,8 @@ fn base64_table() -> HashMap<u8, char> {
 }
 
 fn split_6bit(bytes: &[u8]) -> Vec<u8> {
+    static SIX_BIT_MASK: u8 = 0b_0011_1111;
+
     let bytes = bytes.to_vec();
     let chunk_length = match bytes.len() % 3 {
         0 => bytes.len() / 3,
@@ -99,7 +101,7 @@ fn split_6bit(bytes: &[u8]) -> Vec<u8> {
             Some(b) => b,
             None => &0x00,
         };
-        splitted.push((first_byte << 4 | second_byte >> 4) & 0b_0011_1111);
+        splitted.push((first_byte << 4 | second_byte >> 4) & SIX_BIT_MASK);
 
         if let None = bytes.get(chunk * 3 + 1) {
             continue;
@@ -109,13 +111,13 @@ fn split_6bit(bytes: &[u8]) -> Vec<u8> {
             Some(b) => b,
             None => &0x00,
         };
-        splitted.push((second_byte << 2 | third_byte >> 6) & 0b_0011_1111);
+        splitted.push((second_byte << 2 | third_byte >> 6) & SIX_BIT_MASK);
 
         if let None = bytes.get(chunk * 3 + 2) {
             continue;
         }
 
-        splitted.push(third_byte & 0b0011_1111);
+        splitted.push(third_byte & SIX_BIT_MASK);
     }
 
     splitted
