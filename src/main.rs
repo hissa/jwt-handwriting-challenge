@@ -120,3 +120,40 @@ fn split_6bit(bytes: &[u8]) -> Vec<u8> {
 
     splitted
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_split_6bit() {
+        let bytes = vec![0b_1101_1010, 0b_1010_1101, 0b_0110_1010];
+        let expected = vec![0b_0011_0110, 0b_0010_1010, 0b_0011_0101, 0b_0010_1010];
+        assert_eq!(split_6bit(&bytes), expected);
+    }
+
+    #[test]
+    fn test_base64_table() {
+        let table = base64_table();
+        assert_eq!(table.get(&0), Some(&'A'));
+        assert_eq!(table.get(&25), Some(&'Z'));
+        assert_eq!(table.get(&26), Some(&'a'));
+        assert_eq!(table.get(&51), Some(&'z'));
+        assert_eq!(table.get(&52), Some(&'0'));
+        assert_eq!(table.get(&61), Some(&'9'));
+        assert_eq!(table.get(&62), Some(&'+'));
+        assert_eq!(table.get(&63), Some(&'/'));
+    }
+
+    #[test]
+    fn test_base64() {
+        let bytes = "ABCDEFG".as_bytes();
+        assert_eq!(base64(bytes), "QUJDREVGRw==");
+    }
+
+    #[test]
+    fn test_base64_url() {
+        let bytes = vec![0b_1111_1011, 0b_1111_0000, 0b_0000_0000];
+        assert_eq!(base64_url(&bytes), "-_AA");
+    }
+}
